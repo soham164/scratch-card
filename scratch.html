@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mystery Rewards - Scratch & Win</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        .bg-animation {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .bg-animation::before {
+            content: '';
+            position: absolute;
+            width: 150%;
+            height: 150%;
+            background: radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+                        radial-gradient(circle at 40% 20%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(-20px, -20px) rotate(1deg); }
+            66% { transform: translate(20px, -10px) rotate(-1deg); }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        h1 {
+            font-size: 3.5em;
+            font-weight: 700;
+            background: linear-gradient(to right, #ffffff, #f0f0f0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 15px;
+            letter-spacing: -1px;
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.3em;
+            font-weight: 300;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+
+        .card-wrapper {
+            perspective: 1000px;
+        }
+
+        .scratch-card-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .scratch-card-container:hover:not(.scratched) {
+            transform: translateY(-5px);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+        }
+
+        .scratch-card {
+            position: relative;
+            width: 100%;
+            height: 200px;
+            border-radius: 15px;
+            overflow: hidden;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            margin-bottom: 15px;
+        }
+
+        .scratch-card.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .scratch-card canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+            z-index: 2;
+        }
+
+        .scratch-card.disabled canvas {
+            cursor: not-allowed;
+        }
+
+        .card-content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #ffffff, #f8f9fa);
+            color: #333;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .prize-amount {
+            font-size: 2.8em;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        .prize-text {
+            color: #666;
+            font-size: 1.1em;
+            font-weight: 500;
+        }
+
+        .card-number {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #667eea;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9em;
+            z-index: 3;
+        }
+
+        .redeem-button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            opacity: 0;
+            transform: translateY(-10px);
+            pointer-events: none;
+        }
+
+        .redeem-button.active {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .redeem-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .locked-message {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.95em;
+            padding: 10px;
+            display: none;
+        }
+
+        .scratch-card.disabled + .locked-message {
+            display: block;
+        }
+
+        /* Terms and Conditions Page Styles */
+        .terms-container {
+            display: none;
+            max-width: 800px;
+            margin: 50px auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        }
+
+        .terms-container.active {
+            display: block;
+        }
+
+        .terms-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .terms-header h2 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .coupon-section {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+            text-align: center;
+            color: white;
+        }
+
+        .coupon-label {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            opacity: 0.9;
+        }
+
+        .coupon-code {
+            background: white;
+            color: #667eea;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-size: 1.8em;
+            font-weight: bold;
+            letter-spacing: 2px;
+            display: inline-block;
+            margin-bottom: 20px;
+            user-select: all;
+        }
+
+        .copy-button {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .copy-button:hover {
+            background: white;
+            color: #667eea;
+        }
+
+        .copy-button.copied {
+            background: #4caf50;
+            border-color: #4caf50;
+        }
+
+        .terms-content {
+            color: #555;
+            line-height: 1.8;
+        }
+
+        .terms-content h3 {
+            color: #333;
+            margin: 25px 0 15px;
+        }
+
+        .terms-content ul {
+            margin-left: 20px;
+            margin-bottom: 20px;
+        }
+
+        .terms-content li {
+            margin: 10px 0;
+        }
+
+        .action-link {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .action-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 2.5em; }
+            .cards-grid { 
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            .terms-container { 
+                margin: 20px;
+                padding: 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animation"></div>
+    
+    <!-- Main Scratch Cards Page -->
+    <div class="container" id="mainPage">
+        <div class="header">
+            <h1>Mystery Rewards</h1>
+            <p class="subtitle">Choose one card and scratch to reveal your exclusive reward</p>
+        </div>
+        
+        <div class="cards-grid" id="cardsContainer"></div>
+    </div>
+
+    <!-- Terms and Conditions Page -->
+    <div class="terms-container" id="termsPage">
+        <div class="terms-header">
+            <h2>🎉 Congratulations!</h2>
+            <p>You've unlocked an exclusive reward</p>
+        </div>
+
+        <div class="coupon-section">
+            <div class="coupon-label">Your Coupon Code</div>
+            <div class="coupon-code" id="couponCode">STARTUP2024</div>
+            <button class="copy-button" onclick="copyCoupon()">Copy Code</button>
+        </div>
+
+        <div class="terms-content">
+            <h3>Terms and Conditions</h3>
+            <ul>
+                <li>This coupon code is valid for one-time use only</li>
+                <li>Valid until December 31, 2024</li>
+                <li>Cannot be combined with other offers or promotions</li>
+                <li>Applicable on minimum purchase of $50</li>
+                <li>Non-transferable and cannot be exchanged for cash</li>
+            </ul>
+
+            <h3>How to Redeem</h3>
+            <ul>
+                <li>Copy the coupon code above</li>
+                <li>Visit our website and add items to your cart</li>
+                <li>Apply the coupon code at checkout</li>
+                <li>Enjoy your exclusive discount!</li>
+            </ul>
+
+            <h3>Additional Information</h3>
+            <p>This offer is exclusive to scratch card winners. The coupon provides a discount based on your winning amount. For any questions or issues with redemption, please contact our customer support team.</p>
+
+            <center>
+                <a href="#" class="action-link">Continue Shopping</a>
+            </center>
+        </div>
+    </div>
+
+    <script>
+        // Prize pool
+        const prizes = [
+            { amount: '20% OFF', text: 'Discount Voucher', code: 'SAVE20NOW' },
+            { amount: '15% OFF', text: 'Special Discount', code: 'DEAL15TODAY' },
+            { amount: '$10 OFF', text: 'Cash Voucher', code: 'CASH10WIN' },
+            { amount: 'FREE SHIPPING', text: 'On Next Order', code: 'SHIPFREE' },
+            { amount: '25% OFF', text: 'Premium Discount', code: 'MEGA25DEAL' },
+            { amount: 'BUY 1 GET 1', text: 'Special Offer', code: 'BOGO2024' }
+        ];
+
+        // Shuffle array
+        function shuffleArray(array) {
+            const newArray = [...array];
+            for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+            }
+            return newArray;
+        }
+
+        let scratchedCard = null;
+        let selectedPrize = null;
+        const shuffledPrizes = shuffleArray(prizes);
+
+        // Create scratch card
+        function createScratchCard(prize, index) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'card-wrapper';
+
+            const container = document.createElement('div');
+            container.className = 'scratch-card-container';
+            
+            const cardDiv = document.createElement('div');
+            cardDiv.className = 'scratch-card';
+            cardDiv.id = `card-${index}`;
+            
+            const cardNumber = document.createElement('div');
+            cardNumber.className = 'card-number';
+            cardNumber.textContent = `#${(index + 1).toString().padStart(2, '0')}`;
+            
+            const content = document.createElement('div');
+            content.className = 'card-content';
+            content.innerHTML = `
+                <div class="prize-amount">${prize.amount}</div>
+                <div class="prize-text">${prize.text}</div>
+            `;
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = 300;
+            canvas.height = 200;
+            
+            cardDiv.appendChild(cardNumber);
+            cardDiv.appendChild(content);
+            cardDiv.appendChild(canvas);
+            
+            const redeemBtn = document.createElement('button');
+            redeemBtn.className = 'redeem-button';
+            redeemBtn.textContent = 'REDEEM REWARD';
+            redeemBtn.onclick = () => showTermsPage(prize);
+            
+            const lockedMsg = document.createElement('div');
+            lockedMsg.className = 'locked-message';
+            lockedMsg.textContent = 'You can only scratch one card';
+            
+            container.appendChild(cardDiv);
+            container.appendChild(redeemBtn);
+            container.appendChild(lockedMsg);
+            wrapper.appendChild(container);
+            
+            const ctx = canvas.getContext('2d');
+            
+            // Create gradient scratch surface
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, '#8e9eab');
+            gradient.addColorStop(1, '#eef2f3');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Add pattern overlay
+            ctx.globalAlpha = 0.3;
+            for (let i = 0; i < 100; i++) {
+                ctx.beginPath();
+                const x = Math.random() * canvas.width;
+                const y = Math.random() * canvas.height;
+                ctx.arc(x, y, Math.random() * 2, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+            
+            // Add subtle text overlay
+            ctx.save();
+            ctx.globalAlpha = 0.15;
+            ctx.font = 'bold 60px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = '#000000';
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(-0.2);
+            ctx.fillText('?', 0, 0);
+            ctx.restore();
+            
+            // Scratch functionality
+            let isScratching = false;
+            let scratched = false;
+            
+            function scratch(x, y) {
+                if (scratched || scratchedCard !== null) return;
+                
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                const scratchX = (x - rect.left) * scaleX;
+                const scratchY = (y - rect.top) * scaleY;
+                
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.beginPath();
+                ctx.arc(scratchX, scratchY, 30, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Check scratch progress
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                let cleared = 0;
+                for (let i = 3; i < imageData.data.length; i += 4) {
+                    if (imageData.data[i] === 0) cleared++;
+                }
+                
+                const progress = cleared / (canvas.width * canvas.height / 4);
+                if (progress > 0.5 && !scratched) {
+                    scratched = true;
+                    scratchedCard = index;
+                    selectedPrize = prize;
+                    
+                    // Reveal completely
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    
+                    // Show redeem button
+                    redeemBtn.classList.add('active');
+                    
+                    // Disable other cards
+                    document.querySelectorAll('.scratch-card').forEach((card, idx) => {
+                        if (idx !== index) {
+                            card.classList.add('disabled');
+                        }
+                    });
+                }
+            }
+            
+            // Mouse events
+            canvas.addEventListener('mousedown', (e) => {
+                if (scratchedCard !== null && scratchedCard !== index) return;
+                isScratching = true;
+                scratch(e.clientX, e.clientY);
+            });
+            
+            canvas.addEventListener('mousemove', (e) => {
+                if (isScratching) {
+                    scratch(e.clientX, e.clientY);
+                }
+            });
+            
+            canvas.addEventListener('mouseup', () => {
+                isScratching = false;
+            });
+            
+            canvas.addEventListener('mouseleave', () => {
+                isScratching = false;
+            });
+            
+            // Touch events
+            canvas.addEventListener('touchstart', (e) => {
+                if (scratchedCard !== null && scratchedCard !== index) return;
+                e.preventDefault();
+                isScratching = true;
+                const touch = e.touches[0];
+                scratch(touch.clientX, touch.clientY);
+            });
+            
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (isScratching) {
+                    const touch = e.touches[0];
+                    scratch(touch.clientX, touch.clientY);
+                }
+            });
+            
+            canvas.addEventListener('touchend', () => {
+                isScratching = false;
+            });
+            
+            return wrapper;
+        }
+
+        // Initialize cards
+        const container = document.getElementById('cardsContainer');
+        shuffledPrizes.forEach((prize, index) => {
+            container.appendChild(createScratchCard(prize, index));
+        });
+
+        // Show terms page
+        function showTermsPage(prize) {
+            document.getElementById('mainPage').style.display = 'none';
+            document.getElementById('termsPage').classList.add('active');
+            document.getElementById('couponCode').textContent = prize.code;
+        }
+
+        // Copy coupon function
+        function copyCoupon() {
+            const couponCode = document.getElementById('couponCode').textContent;
+            navigator.clipboard.writeText(couponCode).then(() => {
+                const button = event.target;
+                button.classList.add('copied');
+                button.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    button.classList.remove('copied');
+                    button.textContent = 'Copy Code';
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>
